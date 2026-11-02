@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+<?xml-model href="rfc7991bis.rnc"?>
+<rfc
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  category="info"
+  docName="draft-durga-pquip-pqc-agentic-delegation-00"
+  ipr="trust200902"
+  obsoletes=""
+  updates=""
+  submissionType="independent"
+  xml:lang="en"
+  version="3">
+
+  <front>
+    <title abbrev="PQ-Agentic Delegation &amp; Trace Receipts">Post-Quantum Hybrid Cryptographic Delegation Chains and Merkle-Aggregated Execution Receipts for Autonomous AI Agents</title>
+
+    <seriesInfo name="Internet-Draft" value="draft-durga-pquip-pqc-agentic-delegation-00"/>
+
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <city>Chicago</city>
+          <region>IL</region>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+        <uri>https://orcid.org/0009-0003-7014-355X</uri>
+      </address>
+    </author>
+
+    <date year="2026" month="October" day="31"/>
+
+    <area>Security</area>
+    <workgroup>Post-Quantum Use In Protocols (pquip)</workgroup>
+
+    <keyword>Post-Quantum Cryptography</keyword>
+    <keyword>ML-DSA</keyword>
+    <keyword>SLH-DSA</keyword>
+    <keyword>Autonomous AI Agents</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>WIMSE</keyword>
+    <keyword>SCITT</keyword>
+
+    <abstract>
+      <t>
+        Autonomous AI agent ecosystems rely on multi-hop cryptographic delegation chains and signed execution traces (currently built on Ed25519, ECDSA P-256, and RSA-PSS) to enforce least-privilege tool invocations across Model Context Protocol (MCP) and Agent-to-Agent (A2A) boundaries, and to preserve long-term non-repudiation for regulatory audit logs. This architecture faces two existential vulnerabilities in the Post-Quantum era: (1) "Harvest-Now, Forge-and-Repudiate-Later" (HNFRL) attacks, wherein Cryptographically Relevant Quantum Computers (CRQCs) running Shor's algorithm retroactively forge or repudiate multi-year compliance traces (e.g., 7-to-10-year HIPAA, SOX, FDA 21 CFR Part 11, and defense operational logs) and synthesize retroactive human-in-the-loop approvals; and (2) "Lattice Signature-Bloat Amplification," wherein naively substituting 64-byte Ed25519 signatures with 3,309-byte ML-DSA-65 (FIPS 204) signatures across a 10-hop sub-agent chain inflates per-call authorization headers from 640 bytes to over 46 KB (including public keys), exceeding HTTP/2 header limits and degrading sub-10ms real-time tool routing.
+      </t>
+      <t>
+        This document specifies a wire-compatible Post-Quantum Agentic Delegation and Trace Receipt profile ("PQ-Agentic"). It introduces a two-tier cryptographic architecture: (a) a Hot-Path Hybrid Delegation Envelope combining classical Ed25519 with ML-DSA-65 (FIPS 204) via Pre-Verified Session-Grant Digest Chaining (PVSGDC), replacing redundant per-call inline re-transmission of O(N) prior delegators' 5,261-byte ML-DSA-65 public keys and signatures with 32-byte SHAKE256 digests of out-of-band PEP-verified delegation grants; and (b) a Cold-Path Long-Horizon Archival Receipt anchored with stateless hash-based SLH-DSA-SHAKE-128f (FIPS 205) over RFC 9943 SCITT transparency Merkle roots, guaranteeing 30-year quantum-resistant non-repudiation even under catastrophic lattice cryptanalysis.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section anchor="introduction" numbered="true" toc="default">
+      <name>Introduction</name>
+      <t>
+        As autonomous AI agents transition into regulated enterprise, healthcare, financial, and critical-infrastructure operations, security standards—including IETF WIMSE workload credentials, IETF SCITT transparency receipts, and emerging agentic execution-trace verification specifications (<xref target="I-D.durga-agenttrust-trace-verification"/> and <xref target="I-D.durga-wimse-ctx-isolation"/>)—rely on asymmetric digital signatures to bind human intent, scope attenuation, and tool-invocation receipts.
+      </t>
+      <t>
+        Today, virtually 100% of production agentic identity tokens (OAuth 2.0 JWT/JWS, SPIFFE SVIDs, and COSE receipts) use classical elliptic-curve cryptography (Ed25519 or ECDSA P-256). While the broader Internet community has prioritized Post-Quantum Cryptography (PQC) for TLS key establishment (to defeat "Harvest-Now, Decrypt-Later" confidentiality attacks via ML-KEM / FIPS 203), the agentic AI ecosystem has overlooked a dual threat that strikes digital signatures directly:
+      </t>
+      <ul spacing="normal">
+        <li>
+          <strong>1. Harvest-Now, Forge-and-Repudiate-Later (HNFRL) on Long-Lived Agentic Audit Logs:</strong> Regulated industries require immutable retention of autonomous decision and tool-execution logs for 7 to 30 years (e.g., HIPAA 6-year minimum, SOX 7-year audit trails, aviation/industrial safety logs). Once a CRQC recovers the classical private key corresponding to a historical agent identity or human approver public key recorded in an audit log, an adversary (or a negligent operator seeking to repudiate liability) can mathematically forge alternative historical execution traces with identical timestamps and valid Ed25519 signatures, destroying the evidentiary integrity of the entire archive.
+        </li>
+        <li>
+          <strong>2. Multi-Hop Lattice Signature-Bloat Amplification (DoS):</strong> Unlike TLS handshakes—which amortize PQC key and signature sizes across long-lived TCP/QUIC connections—autonomous agent workflows execute stateless, high-frequency JSON-RPC tool invocations across deeply nested delegation chains (User -&gt; Orchestrator -&gt; Planner -&gt; Domain Sub-Agent -&gt; MCP Gateway -&gt; Tool Server). In classical Ed25519, a 10-hop delegation chain carries 10 x (64-byte signature + 32-byte public key) = 960 bytes. Under NIST FIPS 204 (ML-DSA-65), a single signature is 3,309 bytes and a public key is 1,952 bytes (5,261 bytes per hop). A naive 10-hop nested token balloons to 52,610 bytes (over 70 KB when Base64url-encoded), breaking 8 KB–16 KB HTTP header buffers, overflowing JSON-RPC frame limits, and introducing unacceptable serialization latency.
+        </li>
+      </ul>
+      <t>
+        This specification defines the normative cryptographic structures, CBOR/JCS canonicalization rules, and Merkle-folded delegation envelopes required to make autonomous AI agent protocols quantum-resilient today without violating wire-size or latency budgets.
+      </t>
+    </section>
+
+    <section anchor="conventions" numbered="true" toc="default">
+      <name>Conventions and Definitions</name>
+      <t>
+        The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they appear in all capitals, as shown here.
+      </t>
+      <dl newline="false" spacing="normal">
+        <dt>HNFRL (Harvest-Now, Forge-and-Repudiate-Later):</dt>
+        <dd>An adversarial or evidentiary-repudiation model in which classical public keys and signed agentic audit logs are archived today and subsequently compromised via Shor's algorithm on a CRQC to synthesize counterfeit historical approvals or repudiate authentic execution receipts.</dd>
+        <dt>Composite Hybrid Algorithm (Ed25519 + ML-DSA-65):</dt>
+        <dd>A dual-signature construction requiring both a valid RFC 8032 Ed25519 signature and a valid NIST FIPS 204 ML-DSA-65 lattice signature over a domain-separated canonical pre-image.</dd>
+        <dt>Merkle-Folded Delegation Hop (MFDH):</dt>
+        <dd>A compact intermediate delegation link that binds scope attenuation into a SHAKE256 Merkle accumulator anchored by the terminal invoker's hybrid PQ signature and verified by the Policy Enforcement Point (PEP) via pre-registered key-directory digests.</dd>
+      </dl>
+    </section>
+
+    <section anchor="architecture" numbered="true" toc="default">
+      <name>Two-Tier Post-Quantum Agentic Architecture</name>
+      <t>
+        To simultaneously satisfy sub-10ms runtime tool-invocation latency and 30-year regulatory non-repudiation, compliant agentic runtimes MUST separate cryptographic enforcement into two coupled planes:
+      </t>
+      <artset>
+        <artwork type="ascii-art"><![CDATA[
++-----------------------------------------------------------------------+
+| TIER 1: HOT-PATH DELEGATION &amp; TOOL INVOCATION (Sub-10ms Budget)       |
+|                                                                       |
+|  [Human / Root Intent]                                                |
+|         |  Hybrid Root Anchor: Ed25519 + ML-DSA-65 (Detached JWKThumb)|
+|         v                                                             |
+|  [Hop 1..k-1: Intermediate Sub-Agents]                                |
+|         |  Merkle-Folded Scope Attenuation (SHAKE256 + Key-Bound MAC) |
+|         |  (32-byte inclusion witness per hop instead of 5.2KB ML-DSA)|
+|         v                                                             |
+|  [Hop k: Terminal Invoker -> MCP / A2A Policy Enforcement Point]      |
+|         |  Single Terminal Hybrid Proof: Ed25519 (64B) + ML-DSA-65    |
+|         |  (3,309B) over JCS(Intent_Root || Merkle_Chain_Root || Tool)|
++---------+-------------------------------------------------------------+
+          |
+          | Asynchronous Batch Commit (Every T &lt;= 60s or N &lt;= 1024 steps)
+          v
++-----------------------------------------------------------------------+
+| TIER 2: COLD-PATH ARCHIVAL TRANSPARENCY LEDGER (30-Year Horizon)      |
+|                                                                       |
+|  [SCITT / Append-Only Trace Notary]                                   |
+|         |  Computes Binary Merkle Tree over Tier-1 Hybrid Receipts    |
+|         |  Signs Epoch Root with Stateless Hash-Based Signature:      |
+|         +--> SLH-DSA-SHAKE-128f (FIPS 205) + RFC 3161 PQ Timestamp    |
++-----------------------------------------------------------------------+
+]]></artwork>
+      </artset>
+
+      <section anchor="hot-path" numbered="true" toc="default">
+        <name>Tier 1: Hot-Path Hybrid Delegation with Merkle Hop Folding</name>
+        <t>
+          In a multi-hop delegation chain of depth <tt>k</tt>, requiring every intermediate agent <tt>A_1, ..., A_k</tt> to append an inline ML-DSA-65 public key (1,952 bytes) and signature (3,309 bytes) scales linearly at 5,261 bytes per hop. Instead, this specification defines <strong>Merkle-Folded Delegation Hop (MFDH)</strong> compaction:
+        </t>
+        <ol spacing="normal">
+          <li>
+            <strong>Key-Directory Thumbprint Addressing:</strong> Agent identities MUST NOT embed raw 1,952-byte ML-DSA-65 public keys inline within per-request JSON-RPC or HTTP headers. Instead, each agent references its composite key via a 32-byte SHAKE256 JWK/COSE_Key thumbprint (<tt>pq_kid</tt>) resolved and cached out-of-band via the WIMSE/SPIFFE workload trust bundle.
+          </li>
+          <li>
+            <strong>Epoch-Pinned Hybrid Delegation Grant:</strong> When Agent <tt>A_{i-1}</tt> delegates attenuated scope <tt>S_i</tt> (where <tt>S_i</tt> is a strict subset of <tt>S_{i-1}</tt>) to <tt>A_i</tt>, <tt>A_{i-1}</tt> signs the delegation grant once per session epoch using <tt>Hybrid-Ed25519-ML-DSA-65</tt> and registers the 32-byte grant receipt hash <tt>H_i = SHAKE256(JCS(Grant_i) || Sig_{ML-DSA-65})</tt> with the local or federated Guardrail Witness cache.
+          </li>
+          <li>
+            <strong>Constant-Size Per-Call Wire Envelope:</strong> On each individual MCP tool invocation, the terminal agent <tt>A_k</tt> transmits: (a) the ordered list of 32-byte hop digests <tt>[H_1, ..., H_{k-1}]</tt>, (b) the canonicalized tool-call parameters and context-isolation witness (<xref target="I-D.durga-wimse-ctx-isolation"/>), and (c) a single terminal <tt>Hybrid-Ed25519-ML-DSA-65</tt> signature (3,373 bytes total) over the Merkle root of <tt>[H_1, ..., H_{k-1}, Call_k]</tt>.
+          </li>
+        </ol>
+        <t>
+          Consequently, a 10-hop Post-Quantum delegation proof on the wire requires only <tt>3,373 + (9 * 32) = 3,661 bytes</tt>—a <strong>93.0% wire-size reduction</strong> compared to naive 52,610-byte inline ML-DSA-65 chaining—while preserving full non-interactive lattice verification against cached session grants.
+        </t>
+      </section>
+
+      <section anchor="cold-path" numbered="true" toc="default">
+        <name>Tier 2: Cold-Path Stateless Hash-Based Archival (SLH-DSA / FIPS 205)</name>
+        <t>
+          Because structured lattice assumptions (Module-LWE / Module-SIS underlying ML-DSA) are mathematically newer than hash collision-resistance assumptions, high-assurance regulatory archives MUST NOT rely solely on lattice signatures for multi-decade non-repudiation.
+        </t>
+        <t>
+          At configurable epoch boundaries (<tt>Delta_t &lt;= 60</tt> seconds or <tt>N &lt;= 1,024</tt> trace steps), the Trace Verification Notary aggregates all verified Tier-1 step digests into a SHAKE256 Merkle tree and signs the epoch root using <strong>SLH-DSA-SHAKE-128f (NIST FIPS 205)</strong> alongside a composite ML-DSA-87 signature. Even if an adversary archives all traffic today and later wields both a CRQC (breaking Ed25519) and a theoretical algebraic lattice reduction (weakening ML-DSA), the SLH-DSA-SHAKE-128f epoch seal remains secure under the sole assumption that SHAKE256 is pre-image and second-pre-image resistant.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="wire-format" numbered="true" toc="default">
+      <name>Normative PQ-Agentic Envelope Schema (JCS / JSON-RPC)</name>
+      <t>
+        When serialized in JSON (such as inside an MCP <tt>_meta.pq_delegation</tt> block or an A2A task header), the envelope MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to domain-separated hashing and signing:
+      </t>
+      <sourcecode type="json"><![CDATA[
+{
+  "pq_profile": "durga-pquip-agentic-v1",
+  "suite_id": "HYBRID-ED25519-MLDSA65-SHAKE256",
+  "policy_epoch": 42,
+  "policy_manifest_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "invoker_pq_kid": "shake256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "hop_chain_digests": [
+    "shake256:4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+    "shake256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+  ],
+  "effective_scope": ["mcp:tool:erp.ledger.read", "mcp:max_rows:100"],
+  "clean_context_root": "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+  "timestamp_ms": 1793460000000,
+  "nonce": "b4f2e8a1-9c3d-4e7b-8a2f-1d5c6e7f8a9b",
+  "signatures": {
+    "ed25519": "base64url(64-byte-rfc8032-signature)",
+    "ml_dsa_65": "base64url(3309-byte-fips204-signature)"
+  }
+}
+]]></sourcecode>
+      <t>
+        The domain-separated signing pre-image MUST be constructed as:
+      </t>
+      <sourcecode type="pseudocode"><![CDATA[
+PreImage = "PQ-AGENTIC-DELEGATION-V1" || 0x00 ||
+           SHAKE256_512(JCS(Envelope_Without_Signatures))
+]]></sourcecode>
+      <t>
+        A Policy Enforcement Point (PEP) MUST verify <strong>both</strong> <tt>signatures.ed25519</tt> and <tt>signatures.ml_dsa_65</tt> against the public keys bound to <tt>invoker_pq_kid</tt>. If either signature fails verification, or if <tt>policy_manifest_sha256</tt> does not match the active policy AST digest, the PEP MUST fail closed and reject the tool invocation with error code <tt>-32098 (PQ_SIGNATURE_OR_EPOCH_INVALID)</tt>.
+      </t>
+    </section>
+
+    <section anchor="security-considerations" numbered="true" toc="default">
+      <name>Security Considerations</name>
+      <section anchor="downgrade" numbered="true" toc="default">
+        <name>Cryptographic Suite Downgrade Prevention</name>
+        <t>
+          An adversary capable of intercepting MCP or A2A traffic MAY attempt to strip the <tt>ml_dsa_65</tt> signature field and force fallback to classical <tt>ed25519</tt>. To prevent stripping attacks, the <tt>suite_id</tt> is bound inside the JCS-canonicalized signed payload, and the workload's SPIFFE/WIMSE trust bundle entry explicitly marks <tt>pq_required: true</tt>. Any envelope presenting only a classical signature for a <tt>pq_required</tt> workload MUST be rejected immediately.
+        </t>
+      </section>
+      <section anchor="policy-epoch" numbered="true" toc="default">
+        <name>Protection Against Retroactive Policy-Drift Forgery</name>
+        <t>
+          Binding <tt>policy_manifest_sha256</tt> and <tt>policy_epoch</tt> directly into the hybrid-signed pre-image ensures that even across software releases that retain the same <tt>invoker_pq_kid</tt>, any modification to scope-interpretation semantics produces a deterministic digest mismatch, requiring explicit re-appraisal prior to carrying forward historical authorization conclusions.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="iana-considerations" numbered="true" toc="default">
+      <name>IANA Considerations</name>
+      <t>
+        This document has no immediate IANA actions. Future revisions will request registration of the <tt>HYBRID-ED25519-MLDSA65-SHAKE256</tt> algorithm identifier within the IANA JOSE and COSE Algorithms registries.
+      </t>
+    </section>
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+      <references>
+        <name>Normative References</name>
+        <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+          <front>
+            <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+            <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+            <date month="March" year="1997"/>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="2119"/>
+        </reference>
+        <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+          <front>
+            <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+            <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+            <date month="May" year="2017"/>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="8174"/>
+        </reference>
+        <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+          <front>
+            <title>JSON Canonicalization Scheme (JCS)</title>
+            <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+            <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+            <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+            <date month="June" year="2020"/>
+          </front>
+          <seriesInfo name="RFC" value="8785"/>
+        </reference>
+        <reference anchor="FIPS204" target="https://doi.org/10.6028/NIST.FIPS.204">
+          <front>
+            <title>Module-Lattice-Based Digital Signature Standard (ML-DSA)</title>
+            <author>
+              <organization>National Institute of Standards and Technology</organization>
+            </author>
+            <date month="August" year="2024"/>
+          </front>
+          <seriesInfo name="NIST FIPS" value="204"/>
+        </reference>
+        <reference anchor="FIPS205" target="https://doi.org/10.6028/NIST.FIPS.205">
+          <front>
+            <title>Stateless Hash-Based Digital Signature Standard (SLH-DSA)</title>
+            <author>
+              <organization>National Institute of Standards and Technology</organization>
+            </author>
+            <date month="August" year="2024"/>
+          </front>
+          <seriesInfo name="NIST FIPS" value="205"/>
+        </reference>
+      </references>
+      <references>
+        <name>Informative References</name>
+        <reference anchor="I-D.durga-agenttrust-trace-verification" target="https://datatracker.ietf.org/doc/draft-durga-agenttrust-trace-verification/">
+          <front>
+            <title>Cryptographic Execution-Trace Verification and Scope-Bounded Delegation for Autonomous AI Agents</title>
+            <author fullname="R. K. Durga" initials="R. K." surname="Durga"/>
+            <date month="October" year="2026"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-durga-agenttrust-trace-verification-00"/>
+        </reference>
+        <reference anchor="I-D.durga-wimse-ctx-isolation" target="https://datatracker.ietf.org/doc/draft-durga-wimse-ctx-isolation/">
+          <front>
+            <title>Cryptographic Separation of Untrusted Data-Plane Context from Control-Plane Tool Invocations in Autonomous AI Agents</title>
+            <author fullname="R. K. Durga" initials="R. K." surname="Durga"/>
+            <date month="October" year="2026"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-durga-wimse-ctx-isolation-00"/>
+        </reference>
+      </references>
+    </references>
+  </back>
+</rfc>

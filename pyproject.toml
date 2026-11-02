@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-governance-benchmarks"
+version = "1.0.0"
+description = "Deterministic RFC 8785 JCS Execution-Trace Verifier, Delegation-Chain Attestation, and OWASP ASI01-ASI10 Adversarial Regression Benchmark Suite"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Raghuvar Karthik Durga", email = "rdurga@microsoft.com"}
+]
+requires-python = ">=3.10"
+keywords = ["agentic-ai", "mcp", "a2a", "owasp-asi", "rfc8785", "jcs", "zero-trust", "agenttrust", "csa-aarm"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security :: Cryptography",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
+[project.urls]
+Homepage = "https://github.com/drk-ram/enterprise-agentic-governance-benchmarks"
+Documentation = "https://doi.org/10.5281/zenodo.23723284"
+ORCID = "https://orcid.org/0009-0003-7014-355X"
+
+[project.scripts]
+agent-gov-verify = "agentic_governance_benchmarks.verifier:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

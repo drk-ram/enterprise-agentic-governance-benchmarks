@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="std"
+     docName="draft-durga-agent-clear-revocation-00"
+     ipr="trust200902"
+     submissionType="IETF"
+     version="3"
+     xml:lang="en">
+  <front>
+    <title abbrev="Transitive CLEAR DAG Revocation &amp; OT Firewall">Transitive CLEAR Revocation and Composite Physical-Safety Windows for Multi-Hop Autonomous Agent DAGs</title>
+    <seriesInfo name="Internet-Draft" value="draft-durga-agent-clear-revocation-00"/>
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+      </address>
+    </author>
+    <date year="2026" month="October" day="30"/>
+    <area>Security</area>
+    <workgroup>WIMSE / OAuth Working Group</workgroup>
+    <keyword>Agentic AI</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>JCS</keyword>
+    <keyword>Ed25519</keyword>
+    <keyword>Zero Trust</keyword>
+    <abstract>
+      <t>When an orchestrator agent delegates sub-tasks across a multi-hop Directed Acyclic Graph (DAG) of specialist agents, OAuth 2.0 Token Revocation (RFC 7009) revokes only individual client tokens and provides no mechanism to atomically halt in-flight child, grandchild, or sibling branches or enforce composite time-to-live windows across the entire execution tree. Furthermore, no protocol binds IEC 62443 / Purdue Enterprise Reference Architecture (PERA) zone boundaries into agent capability receipts. This document specifies the Transitive CLEAR (Cryptographic Lease Early-Abort &amp; Revocation) DAG protocol and hard Operational Technology (OT) Level 0-2 physical-safety firewalling.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" numbered="true">
+      <name>Introduction and Problem Statement</name>
+      <t>In multi-agent workflows, revoking a parent agent's token leaves already-spawned downstream sub-agents free to execute stale tool calls against enterprise or industrial infrastructure. Existing delegation specs lack a transitive DAG epoch heartbeat and a cryptographic Purdue-zone firewall bit that unconditionally blocks autonomous writes to Level 0, Level 1, and Level 2 Programmable Logic Controllers (PLCs) and Safety Instrumented Systems (SIS).</t>
+      <t>This specification complements the foundational execution-trace verification architecture defined in <tt>draft-durga-agenttrust-trace-verification-00</tt> by introducing deterministic, fail-closed wire semantics specifically addressing Transitive CLEAR DAG Revocation &amp; OT Firewall.</t>
+    </section>
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Definitions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 (<xref target="RFC2119"/> <xref target="RFC8174"/>) when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="wire-format" numbered="true">
+      <name>Transitive CLEAR Token and OT Zone Firewall Profile</name>
+      <t>Every node in a multi-hop agent execution DAG MUST carry and verify a signed CLEAR DAG Envelope prior to executing any downstream tool call:</t>
+      <sourcecode type="json"><![CDATA[
+{
+  "clear_version": "1.0",
+  "dag_root_id": "urn:uuid:9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "hop_index": 3,
+  "parent_node_hash": "sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+  "composite_window_start_ms": 1793404800000,
+  "composite_window_end_ms": 1793404805000,
+  "clear_revocation_epoch": 19,
+  "effect_class": "ACTUATE_ADVISORY",
+  "target_purdue_zone": "PERA_LEVEL_3_MES",
+  "sis_hardware_interlock_present": false,
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sig": "base64url(Ed25519(JCS(clear_envelope)))"
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="verification-rules" numbered="true">
+      <name>Normative Fail-Closed Verification Rules</name>
+      <t>Conforming verifiers and relying-party gateways MUST enforce the following deterministic invariants before releasing any downstream side effect:</t>
+      <ol spacing="normal">
+        <li>TRANSITIVE_ANCESTOR_REVOCATION: If any ancestor node in dag_root_id broadcasts a signed CLEAR abort frame or increments clear_revocation_epoch, all descendant nodes MUST immediately abort pending tool calls and release held resource leases within one heartbeat interval.</li>
+        <li>COMPOSITE_WINDOW_CONTAINMENT: At every hop i, the child execution window [start_i, end_i] MUST be a strict subset of its parent's window [start_{i-1}, end_{i-1}], and execution MUST fail closed if current_time > composite_window_end_ms.</li>
+        <li>OT_PURDUE_L0_L2_FIREWALL: Any agent invocation targeting target_purdue_zone in {PERA_LEVEL_0_PROCESS, PERA_LEVEL_1_BASIC_CONTROL, PERA_LEVEL_2_SUPERVISORY} with effect_class != READ_ONLY MUST be unconditionally rejected by the protocol gateway.</li>
+      </ol>
+    </section>
+    <section anchor="security" numbered="true">
+      <name>Security Considerations</name>
+      <t>All pre-image objects MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to signature generation or verification under RFC 8032 Ed25519. Any clock skew exceeding 60 seconds, digest mismatch, or missing cryptographic binding MUST cause the verifier to fail closed and emit an auditable security rejection receipt.</t>
+    </section>
+    <section anchor="iana" numbered="true">
+      <name>IANA Considerations</name>
+      <t>This document requests IANA registration of the media type <tt>application/agent-clear-dag+json</tt> and the registry <tt>IETF Agent Industrial Purdue Zone Identifiers (PERA_LEVEL_0_PROCESS through PERA_LEVEL_5_ENTERPRISE)</tt>, alongside the following header fields:</t>
+      <ul spacing="normal">
+        <li>HTTP/MCP Header Field: <tt>Agent-Clear-DAG</tt></li>
+        <li>HTTP/MCP Header Field: <tt>Agent-OT-Zone-Assertion</tt></li>
+      </ul>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <name>Normative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+          <date month="March" year="1997"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="2119"/>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+          <date month="May" year="2017"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="8174"/>
+      </reference>
+      <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+        <front>
+          <title>JSON Canonicalization Scheme (JCS)</title>
+          <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+          <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+          <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+          <date month="June" year="2020"/>
+        </front>
+        <seriesInfo name="RFC" value="8785"/>
+      </reference>
+      <reference anchor="RFC8032" target="https://www.rfc-editor.org/info/rfc8032">
+        <front>
+          <title>Edwards-Curve Digital Signature Algorithm (EdDSA)</title>
+          <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+          <author fullname="I. Liusvaara" initials="I." surname="Liusvaara"/>
+          <date month="January" year="2017"/>
+        </front>
+        <seriesInfo name="RFC" value="8032"/>
+      </reference>
+    </references>
+  </back>
+</rfc>

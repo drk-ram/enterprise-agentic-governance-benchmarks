@@ -1,0 +1,85 @@
+{
+  "title": "Enterprise Agentic AI Governance, Zero-Trust Execution & Industrial Autonomy Reference Benchmarks",
+  "upload_type": "publication",
+  "publication_type": "report",
+  "publication_date": "2026-10-28",
+  "creators": [
+    {
+      "name": "Durga, Raghuvar Karthik",
+      "affiliation": "Microsoft Corporation"
+    }
+  ],
+  "description": "Reference architecture specifications, deterministic policy-enforcement benchmarks, OCSF telemetry provenance mappings, and ISA-95/Purdue industrial execution invariants building upon the author's foundational 2025 research series in Cloud-Native Platforms, Zero Trust Architecture, Agentic AI Systems, and Self-Optimizing Manufacturing.",
+  "access_right": "open",
+  "license": "cc-by-4.0",
+  "keywords": [
+    "Agentic AI Security",
+    "Zero Trust Architecture",
+    "Model Context Protocol",
+    "OCSF Provenance",
+    "Industrial Autonomy",
+    "Cloud-Native Platforms"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.23723284",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.5281/zenodo.23723283",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i12.1050",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i11.1049",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i10.1048",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i9.1047",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i8.1046",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i7.1045",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i6.1044",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.38124/ijsrmt.v4i5.1043",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    }
+  ]
+}

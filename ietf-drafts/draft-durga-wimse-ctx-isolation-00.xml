@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="std"
+     docName="draft-durga-wimse-ctx-isolation-00"
+     ipr="trust200902"
+     submissionType="IETF"
+     version="3"
+     xml:lang="en">
+  <front>
+    <title abbrev="Agentic Context Taint Isolation">Cryptographic Separation of Untrusted Data-Plane Context from Control-Plane Tool Invocations in Autonomous AI Agents</title>
+    <seriesInfo name="Internet-Draft" value="draft-durga-wimse-ctx-isolation-00"/>
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+      </address>
+    </author>
+    <date year="2026" month="October" day="29"/>
+    <area>Security</area>
+    <workgroup>WIMSE / OAuth Working Group</workgroup>
+    <keyword>Agentic AI</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>JCS</keyword>
+    <keyword>Ed25519</keyword>
+    <keyword>Zero Trust</keyword>
+    <abstract>
+      <t>Autonomous AI agents operating over Model Context Protocol (MCP) and Agent-to-Agent (A2A) transports routinely ingest untrusted external data (emails, web documents, retrieved RAG chunks) into the same inference context that authorizes privileged control-plane tool calls. Existing workload identity and token standards (OAuth 2.1, GNAP, WIMSE Wit/Wpt tokens) bind client identity and authorization scope, but fail to cryptographically bind the provenance taint of the data-plane context that induced the tool invocation, leaving systems vulnerable to indirect prompt-injection confused-deputy attacks. This document specifies a deterministic COSE_Sign1 and JSON Canonicalization Scheme (JCS, RFC 8785) wire profile that attaches a cryptographic Context Taint Attestation (CTA) header to every control-plane tool invocation, forcing relying parties to fail closed when an untrusted or mixed data-plane context attempts to trigger a state-mutating action without an independent out-of-band human or policy approval receipt.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" numbered="true">
+      <name>Introduction and Problem Statement</name>
+      <t>In classical microservices, control-plane requests are triggered by deterministic code paths. In autonomous AI agents, however, a single LLM inference window blends trusted system instructions with untrusted data-plane inputs (e.g., third-party documents, webhooks, or unverified peer agent outputs). Neither OAuth 2.0 Token Exchange (RFC 8693) nor WIMSE Workload Identity Tokens carry a cryptographic commitment to the taint lattice of the context window active at the moment of tool selection.</t>
+      <t>This specification complements the foundational execution-trace verification architecture defined in <tt>draft-durga-agenttrust-trace-verification-00</tt> by introducing deterministic, fail-closed wire semantics specifically addressing Agentic Context Taint Isolation.</t>
+    </section>
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Definitions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 (<xref target="RFC2119"/> <xref target="RFC8174"/>) when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="wire-format" numbered="true">
+      <name>Context Taint Attestation (CTA) Envelope and HTTP/MCP Header Binding</name>
+      <t>Every control-plane tool invocation emitted by a conforming agent runtime MUST include an Agent-Ctx-Isolation header (or _meta.ctxIsolation object in JSON-RPC/MCP) carrying a signed Context Taint Attestation object serialized using RFC 8785 JCS or RFC 8949 Deterministic CBOR:</t>
+      <sourcecode type="json"><![CDATA[
+{
+  "cta_version": "1.0",
+  "invocation_id": "urn:uuid:7f9c2b10-44a1-49e2-910b-88a12c34e901",
+  "parent_trace_ref": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "system_prompt_digest": "sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+  "data_plane_merkle_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "taint_lattice_level": "UNTRUSTED_INGESTED",
+  "tool_effect_class": "STATE_MUTATING",
+  "step_up_receipt_hash": "sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+  "iat": 1793404800,
+  "exp": 1793404860,
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "sha256:1b4f0e9851971998e732078544c96b36c3d01cedf7caa332359d6f1d83567014",
+    "sig": "base64url(Ed25519(JCS(payload)))"
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="verification-rules" numbered="true">
+      <name>Normative Fail-Closed Verification Rules</name>
+      <t>Conforming verifiers and relying-party gateways MUST enforce the following deterministic invariants before releasing any downstream side effect:</t>
+      <ol spacing="normal">
+        <li>TAINT_LATTICE_MONOTONICITY: Once an inference context ingests any byte from an unverified external origin, the runtime MUST transition taint_lattice_level from TRUSTED_ONLY to MIXED_TAINT or UNTRUSTED_INGESTED for the remainder of that context session unless a cryptographic context-reset boundary is executed.</li>
+        <li>CONFUSED_DEPUTY_FAIL_CLOSED: A relying party receiving a tool invocation with tool_effect_class set to STATE_MUTATING or PRIVILEGED_ACTUATE and taint_lattice_level != TRUSTED_ONLY MUST reject the invocation with error code ERR_TAINTED_CONTROL_PLANE unless a valid, unexpired step_up_receipt_hash signed by an independent policy decision engine or human verifier is attached.</li>
+        <li>CONTEXT_MERKLE_BINDING: The data_plane_merkle_root MUST be computed over the ordered RFC 8785 JCS-canonicalized chunks of all retrieved documents and tool outputs present in the active context window.</li>
+      </ol>
+    </section>
+    <section anchor="security" numbered="true">
+      <name>Security Considerations</name>
+      <t>All pre-image objects MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to signature generation or verification under RFC 8032 Ed25519. Any clock skew exceeding 60 seconds, digest mismatch, or missing cryptographic binding MUST cause the verifier to fail closed and emit an auditable security rejection receipt.</t>
+    </section>
+    <section anchor="iana" numbered="true">
+      <name>IANA Considerations</name>
+      <t>This document requests IANA registration of the media type <tt>application/agent-ctx-isolation+json</tt> and the registry <tt>IETF Agent Context Taint Lattice Levels (TRUSTED_ONLY, MIXED_TAINT, UNTRUSTED_INGESTED, QUARANTINED)</tt>, alongside the following header fields:</t>
+      <ul spacing="normal">
+        <li>HTTP/MCP Header Field: <tt>Agent-Ctx-Isolation</tt></li>
+        <li>HTTP/MCP Header Field: <tt>Agent-Step-Up-Receipt</tt></li>
+      </ul>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <name>Normative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+          <date month="March" year="1997"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="2119"/>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+          <date month="May" year="2017"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="8174"/>
+      </reference>
+      <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+        <front>
+          <title>JSON Canonicalization Scheme (JCS)</title>
+          <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+          <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+          <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+          <date month="June" year="2020"/>
+        </front>
+        <seriesInfo name="RFC" value="8785"/>
+      </reference>
+      <reference anchor="RFC8032" target="https://www.rfc-editor.org/info/rfc8032">
+        <front>
+          <title>Edwards-Curve Digital Signature Algorithm (EdDSA)</title>
+          <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+          <author fullname="I. Liusvaara" initials="I." surname="Liusvaara"/>
+          <date month="January" year="2017"/>
+        </front>
+        <seriesInfo name="RFC" value="8032"/>
+      </reference>
+    </references>
+  </back>
+</rfc>

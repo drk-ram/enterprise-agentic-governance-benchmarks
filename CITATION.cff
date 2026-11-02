@@ -1,0 +1,227 @@
+cff-version: 1.2.0
+message: "If you use these IETF Internet-Draft specifications, reference verifiers, or the OWASP ASI01-ASI10 adversarial regression benchmark dataset in your research, standards, or production systems, please cite the software/dataset and the corresponding archival publications below."
+title: "Enterprise Agentic AI Governance, Zero-Trust Execution & Industrial Autonomy Reference Benchmarks"
+version: "1.1.0"
+date-released: "2026-11-01"
+doi: "10.5281/zenodo.23723284"
+url: "https://github.com/drk-ram/enterprise-agentic-governance-benchmarks"
+repository-code: "https://github.com/drk-ram/enterprise-agentic-governance-benchmarks"
+license: Apache-2.0
+authors:
+  - family-names: "Durga"
+    given-names: "Raghuvar Karthik"
+    affiliation: "Microsoft Corporation"
+    orcid: "https://orcid.org/0009-0003-7014-355X"
+keywords:
+  - "Agentic AI Security"
+  - "IETF Internet-Draft"
+  - "WIMSE Context Isolation"
+  - "RFC 8785 JCS"
+  - "Post-Quantum Cryptography (ML-DSA-65)"
+  - "OWASP Top 10 for Agentic Applications (ASI01-ASI10)"
+  - "Model Context Protocol (MCP)"
+  - "Agent-to-Agent (A2A) Governance"
+  - "Zero Trust Architecture"
+preferred-citation:
+  type: report
+  title: "Adversarial Regression Benchmarking for Agentic AI Security Controls Across OWASP ASI01--ASI10"
+  authors:
+    - family-names: "Durga"
+      given-names: "Raghuvar Karthik"
+      affiliation: "Microsoft Corporation"
+      orcid: "https://orcid.org/0009-0003-7014-355X"
+  year: 2026
+  institution: "CERN Zenodo / OpenAIRE"
+  number: "TR-2026-02"
+  doi: "10.5281/zenodo.23735497"
+  url: "https://doi.org/10.5281/zenodo.23735497"
+references:
+  - type: standard
+    title: "Cryptographic Execution-Trace Verification, JCS Canonicalization, and Fail-Closed Delegation Attestation for Autonomous AI Agents (draft-durga-agenttrust-trace-verification-00)"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "Internet Engineering Task Force (IETF)"
+    url: "https://datatracker.ietf.org/doc/draft-durga-agenttrust-trace-verification/"
+  - type: standard
+    title: "Cryptographic Context Isolation and Taint-Tracked Tool Invocation for Agentic Workloads (draft-durga-wimse-ctx-isolation-00)"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "Internet Engineering Task Force (IETF)"
+    url: "https://datatracker.ietf.org/doc/draft-durga-wimse-ctx-isolation/"
+  - type: standard
+    title: "Post-Quantum Hybrid Cryptographic Delegation Chains (Ed25519 + ML-DSA-65) and Merkle-Aggregated Execution Receipts (draft-durga-pquip-pqc-agentic-delegation-00)"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "Internet Engineering Task Force (IETF)"
+    url: "https://datatracker.ietf.org/doc/draft-durga-pquip-pqc-agentic-delegation/"
+  - type: standard
+    title: "Pre-Release Transactional Compensation Leases and CAS Fencing Receipts for Autonomous Agents Over Systems of Record (draft-durga-agent-tx-compensation-lease-00)"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "Internet Engineering Task Force (IETF)"
+    url: "https://datatracker.ietf.org/doc/draft-durga-agent-tx-compensation-lease/"
+  - type: dataset
+    title: "OWASP ASI01-ASI10 Enterprise Agentic AI Security Regression Benchmark (100 Scenarios)"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    doi: "10.5281/zenodo.23723284"
+    url: "https://doi.org/10.57967/hf/11352"
+  - type: report
+    title: "Deterministic Control-Plane Governance and Lease-Bounded Recovery for Enterprise Agentic AI Systems"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "CERN Zenodo / OpenAIRE"
+    number: "TR-2026-01"
+    doi: "10.5281/zenodo.23735274"
+    url: "https://doi.org/10.5281/zenodo.23735274"
+  - type: report
+    title: "Adversarial Regression Benchmarking for Agentic AI Security Controls Across OWASP ASI01--ASI10"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "CERN Zenodo / OpenAIRE"
+    number: "TR-2026-02"
+    doi: "10.5281/zenodo.23735497"
+    url: "https://doi.org/10.5281/zenodo.23735497"
+  - type: report
+    title: "Cryptographic Weight-Custody Manifests, JCS Canonicalization, and Two-Plane Edge Fleet Verification for Autonomous AI Systems"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "CERN Zenodo / OpenAIRE"
+    number: "TR-2026-03"
+    doi: "10.5281/zenodo.23775009"
+    url: "https://doi.org/10.5281/zenodo.23775009"
+  - type: report
+    title: "Merkle-DAG Incremental Verification, Cross-Protocol Semantic Equivalence, and Commit-Bound Metering for Multi-Tenant Agent Exchanges"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "CERN Zenodo / OpenAIRE"
+    number: "TR-2026-04"
+    doi: "10.5281/zenodo.23775532"
+    url: "https://doi.org/10.5281/zenodo.23775532"
+  - type: report
+    title: "Non-Human Identity (NHI) Attestation, On-Behalf-Of (OBO) Token Exchange, and CSA AARM Risk Benchmarking for Autonomous Enterprise Agents"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "CERN Zenodo / OpenAIRE"
+    number: "TR-2026-05"
+    doi: "10.5281/zenodo.23776217"
+    url: "https://doi.org/10.5281/zenodo.23776217"
+  - type: report
+    title: "Hash-Chained Decision Provenance, Purpose-Bound Data Passports, and Reversible Cyber Response in Regulated Cloud Estates"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2026
+    institution: "CERN Zenodo / OpenAIRE"
+    number: "TR-2026-06"
+    doi: "10.5281/zenodo.23776574"
+    url: "https://doi.org/10.5281/zenodo.23776574"
+  - type: report
+    title: "Enterprise Agentic AI Governance, Security, and Autonomous Cloud-Native Architecture: Collected Research Compendium (2025--2026)"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    year: 2025
+    institution: "CERN Zenodo / OpenAIRE"
+    doi: "10.5281/zenodo.23723284"
+    url: "https://doi.org/10.5281/zenodo.23723284"
+  - type: article
+    title: "Implementing Zero Trust Architecture: Principles, Models, and Challenges"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 12
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i12.1050"
+  - type: article
+    title: "Self-Optimizing Factories: The Role of Agentic Automation in Industry 4.0"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 11
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i11.1049"
+  - type: article
+    title: "Cybersecurity in the Digital Age: Foundations, Threats, and Future Directions"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 10
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i10.1048"
+  - type: article
+    title: "Cloud as a Platform for AI/ML: Democratization, Services and Architectures"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 9
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i9.1047"
+  - type: article
+    title: "An Introduction to Cloud Native Applications: Leveraging the Cloud for Scalability and Resilience"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 8
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i8.1046"
+  - type: article
+    title: "From IaaS to FaaS: An Evolutionary Analysis of Cloud Service Models"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 7
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i7.1045"
+  - type: article
+    title: "Beyond Traditional AI: A Comprehensive Study of Agentic Frameworks and Their Applications"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 6
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i6.1044"
+  - type: article
+    title: "A Comprehensive Study of Agentic AI Systems"
+    authors:
+      - family-names: "Durga"
+        given-names: "Raghuvar Karthik"
+    journal: "International Journal of Scientific Research and Modern Technology (IJSRMT)"
+    volume: 4
+    issue: 5
+    year: 2025
+    doi: "10.38124/ijsrmt.v4i5.1043"

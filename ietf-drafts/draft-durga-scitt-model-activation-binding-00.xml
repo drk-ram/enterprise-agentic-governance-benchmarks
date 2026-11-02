@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="std"
+     docName="draft-durga-scitt-model-activation-binding-00"
+     ipr="trust200902"
+     submissionType="IETF"
+     version="3"
+     xml:lang="en">
+  <front>
+    <title abbrev="Merkle Model Activation Binding">Merkle-Anchored Model Weight Release and RATS-Attested Runtime Activation Binding for Edge and Cloud AI Fleets</title>
+    <seriesInfo name="Internet-Draft" value="draft-durga-scitt-model-activation-binding-00"/>
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+      </address>
+    </author>
+    <date year="2026" month="October" day="30"/>
+    <area>Security</area>
+    <workgroup>SCITT / RATS Working Group</workgroup>
+    <keyword>Agentic AI</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>JCS</keyword>
+    <keyword>Ed25519</keyword>
+    <keyword>Zero Trust</keyword>
+    <abstract>
+      <t>Supply Chain Integrity, Transparency, and Trust (SCITT) provides transparent artifact statements, and Remote Attestation Procedures (RATS, RFC 9334) provide hardware/runtime attestation evidence. However, no existing internet standard defines an atomic cryptographic binding between a chunked AI model weight release manifest, a hardware-monotonic anti-rollback epoch counter, and a live RATS attestation result at the moment model weights are mapped into accelerator memory. This document specifies the Model Activation Binding Token (MABT) protocol, preventing load-time weight substitution, silent quantization downgrade, and rollback attacks across cloud and edge AI inference fleets.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" numbered="true">
+      <name>Introduction and Problem Statement</name>
+      <t>AI model weights (GGUF, Safetensors, ONNX) are multi-gigabyte artifacts loaded dynamically by agent runtimes. Standard container image signing verifies the container binary at boot, but does not cryptographically bind the active model tensor chunks, LoRA adapter layers, and quantization profile in GPU/NPU memory to a SCITT transparency receipt and a RATS hardware nonce during inference execution.</t>
+      <t>This specification complements the foundational execution-trace verification architecture defined in <tt>draft-durga-agenttrust-trace-verification-00</tt> by introducing deterministic, fail-closed wire semantics specifically addressing Merkle Model Activation Binding.</t>
+    </section>
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Definitions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 (<xref target="RFC2119"/> <xref target="RFC8174"/>) when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="wire-format" numbered="true">
+      <name>Model Activation Binding Token (MABT) Structure</name>
+      <t>Prior to serving inference requests for a governed agent workflow, the inference runtime MUST generate and register a COSE_Sign1 or JCS-canonicalized Model Activation Binding Token (MABT):</t>
+      <sourcecode type="json"><![CDATA[
+{
+  "mabt_version": "1.0",
+  "workload_id": "spiffe://example.org/ns/prod/sa/agent-inference-node-04",
+  "weight_merkle_root": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+  "manifest_meta": {
+    "chunk_size_bytes": 4194304,
+    "total_byte_length": 16106127360,
+    "quantization_profile": "FP16_STRICT"
+  },
+  "anti_rollback_security_epoch": 42,
+  "rats_eat_attestation_hash": "sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+  "scitt_transparency_receipt_ref": "sha256:4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+  "activation_nonce": "9f86d081884c7d659a2feaa0c55ad015",
+  "exp": 1793491200,
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+    "sig": "base64url(Ed25519(JCS(mabt)))"
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="verification-rules" numbered="true">
+      <name>Normative Fail-Closed Verification Rules</name>
+      <t>Conforming verifiers and relying-party gateways MUST enforce the following deterministic invariants before releasing any downstream side effect:</t>
+      <ol spacing="normal">
+        <li>CHUNKED_WEIGHT_MERKLE_VERIFICATION: The weight_merkle_root MUST be computed as a binary Merkle tree (RFC 9162 style domain separation: 0x00 for leaves, 0x01 for internal nodes) over ordered, fixed-size tensor chunks prior to DMA transfer into accelerator memory.</li>
+        <li>ANTI_ROLLBACK_EPOCH_ENFORCEMENT: Conforming verifiers MUST reject any MABT whose anti_rollback_security_epoch is strictly less than the minimum security epoch persisted in hardware NVRAM or the fleet policy ledger.</li>
+        <li>RATS_NONCE_FRESHNESS: The rats_eat_attestation_hash MUST bind the runtime's hardware measurement, weight_merkle_root, and activation_nonce so replayed attestations from prior boot cycles fail closed.</li>
+      </ol>
+    </section>
+    <section anchor="security" numbered="true">
+      <name>Security Considerations</name>
+      <t>All pre-image objects MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to signature generation or verification under RFC 8032 Ed25519. Any clock skew exceeding 60 seconds, digest mismatch, or missing cryptographic binding MUST cause the verifier to fail closed and emit an auditable security rejection receipt.</t>
+    </section>
+    <section anchor="iana" numbered="true">
+      <name>IANA Considerations</name>
+      <t>This document requests IANA registration of the media type <tt>application/mabt-activation+json</tt> and the registry <tt>IETF Model Activation Verification Profiles</tt>, alongside the following header fields:</t>
+      <ul spacing="normal">
+        <li>HTTP/MCP Header Field: <tt>Agent-Model-Activation-Binding</tt></li>
+      </ul>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <name>Normative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+          <date month="March" year="1997"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="2119"/>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+          <date month="May" year="2017"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="8174"/>
+      </reference>
+      <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+        <front>
+          <title>JSON Canonicalization Scheme (JCS)</title>
+          <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+          <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+          <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+          <date month="June" year="2020"/>
+        </front>
+        <seriesInfo name="RFC" value="8785"/>
+      </reference>
+      <reference anchor="RFC8032" target="https://www.rfc-editor.org/info/rfc8032">
+        <front>
+          <title>Edwards-Curve Digital Signature Algorithm (EdDSA)</title>
+          <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+          <author fullname="I. Liusvaara" initials="I." surname="Liusvaara"/>
+          <date month="January" year="2017"/>
+        </front>
+        <seriesInfo name="RFC" value="8032"/>
+      </reference>
+    </references>
+  </back>
+</rfc>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="std"
+     docName="draft-durga-agent-tx-compensation-lease-00"
+     ipr="trust200902"
+     submissionType="IETF"
+     version="3"
+     xml:lang="en">
+  <front>
+    <title abbrev="Agent Transactional Compensation Leases">Pre-Release Transactional Compensation Leases and CAS Fencing Receipts for Autonomous Agents Over Systems of Record</title>
+    <seriesInfo name="Internet-Draft" value="draft-durga-agent-tx-compensation-lease-00"/>
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+      </address>
+    </author>
+    <date year="2026" month="November" day="1"/>
+    <area>Security</area>
+    <workgroup>HTTPAPI / DISPATCH Working Group</workgroup>
+    <keyword>Agentic AI</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>JCS</keyword>
+    <keyword>Ed25519</keyword>
+    <keyword>Zero Trust</keyword>
+    <abstract>
+      <t>When autonomous AI agents execute write operations against enterprise Systems of Record (ERP, MES, WMS, CRM, ITSM), traditional HTTP idempotency keys (RFC 9110) and post-hoc Saga orchestrators cannot guarantee deterministic recovery if a stochastic multi-step plan halts mid-flight or hallucinates downstream parameters. This document specifies the Pre-Release Transactional Compensation Lease (PTCL) protocol: a fail-closed wire contract requiring an agent runtime to acquire a cryptographically signed recovery reservation lease, prove a bounded rollback window (T_req &lt;= T_granted), and present a Compare-And-Swap (CAS) epoch fencing token prior to committing any state mutation.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" numbered="true">
+      <name>Introduction and Problem Statement</name>
+      <t>Existing HTTP API and MCP tool-execution protocols treat write operations as fire-and-forget mutations or rely on application-layer Saga compensations after state has already been mutated and observed by concurrent processes. No internet standard defines a pre-mutation cryptographic reservation lease that binds an inverse compensation payload, a strict recovery window inequality (T_req &lt;= T_granted), and a monotonic CAS fencing epoch before the target System of Record releases the write lock.</t>
+      <t>This specification complements the foundational execution-trace verification architecture defined in <tt>draft-durga-agenttrust-trace-verification-00</tt> by introducing deterministic, fail-closed wire semantics specifically addressing Agent Transactional Compensation Leases.</t>
+    </section>
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Definitions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 (<xref target="RFC2119"/> <xref target="RFC8174"/>) when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="wire-format" numbered="true">
+      <name>Pre-Release Transactional Compensation Lease (PTCL) Wire Format</name>
+      <t>Before executing a state-mutating request against a conforming System of Record, the agent gateway MUST obtain and attach a signed PTCL object carried in the Agent-Compensation-Lease HTTP header or MCP _meta.compensationLease field:</t>
+      <sourcecode type="json"><![CDATA[
+{
+  "ptcl_version": "1.0",
+  "lease_id": "urn:uuid:3a88e112-901c-4b77-8821-00912a34f119",
+  "sor_target_uri": "https://erp.example.com/api/v2/inventory/allocations/99281",
+  "recovery_mode": "COMPENSATING_ACTION",
+  "t_req_ms": 450,
+  "t_granted_ms": 2000,
+  "cas_fence_epoch": 1048579,
+  "pre_image_state_hash": "sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+  "inverse_payload_jcs_hash": "sha256:4fc82b26aecb47d2868c4efbe3581732a3e7cbcc6c2efb32062c08170a05eeb8",
+  "trace_anchor_ref": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "sha256:7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730",
+    "sig": "base64url(Ed25519(JCS(lease)))"
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="verification-rules" numbered="true">
+      <name>Normative Fail-Closed Verification Rules</name>
+      <t>Conforming verifiers and relying-party gateways MUST enforce the following deterministic invariants before releasing any downstream side effect:</t>
+      <ol spacing="normal">
+        <li>RECOVERY_WINDOW_INEQUALITY: The System of Record verifier MUST verify that t_req_ms &lt;= t_granted_ms and that the current monotonic clock has not exceeded the lease expiration timestamp prior to applying the mutation.</li>
+        <li>MONOTONIC_CAS_FENCING: If the target resource's current state epoch is greater than or equal to cas_fence_epoch, or if the current state digest does not match pre_image_state_hash, the write MUST abort with HTTP 409 Conflict (ERR_STALE_FENCE_EPOCH).</li>
+        <li>FOUR_MODE_RESERVATION_MANDATE: Every lease MUST declare one of four deterministic recovery modes (COMPENSATING_ACTION, SNAPSHOT_RESTORE, DRY_RUN_SHADOW, or HUMAN_ESCROW) and pre-stage the signed inverse payload prior to lock release.</li>
+      </ol>
+    </section>
+    <section anchor="security" numbered="true">
+      <name>Security Considerations</name>
+      <t>All pre-image objects MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to signature generation or verification under RFC 8032 Ed25519. Any clock skew exceeding 60 seconds, digest mismatch, or missing cryptographic binding MUST cause the verifier to fail closed and emit an auditable security rejection receipt.</t>
+    </section>
+    <section anchor="iana" numbered="true">
+      <name>IANA Considerations</name>
+      <t>This document requests IANA registration of the media type <tt>application/agent-tx-lease+json</tt> and the registry <tt>IETF Agent Transactional Recovery Modes (COMPENSATING_ACTION, SNAPSHOT_RESTORE, DRY_RUN_SHADOW, HUMAN_ESCROW)</tt>, alongside the following header fields:</t>
+      <ul spacing="normal">
+        <li>HTTP/MCP Header Field: <tt>Agent-Compensation-Lease</tt></li>
+        <li>HTTP/MCP Header Field: <tt>Agent-Fence-Token</tt></li>
+        <li>HTTP/MCP Header Field: <tt>Agent-Commit-Receipt</tt></li>
+      </ul>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <name>Normative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+          <date month="March" year="1997"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="2119"/>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+          <date month="May" year="2017"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="8174"/>
+      </reference>
+      <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+        <front>
+          <title>JSON Canonicalization Scheme (JCS)</title>
+          <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+          <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+          <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+          <date month="June" year="2020"/>
+        </front>
+        <seriesInfo name="RFC" value="8785"/>
+      </reference>
+      <reference anchor="RFC8032" target="https://www.rfc-editor.org/info/rfc8032">
+        <front>
+          <title>Edwards-Curve Digital Signature Algorithm (EdDSA)</title>
+          <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+          <author fullname="I. Liusvaara" initials="I." surname="Liusvaara"/>
+          <date month="January" year="2017"/>
+        </front>
+        <seriesInfo name="RFC" value="8032"/>
+      </reference>
+    </references>
+  </back>
+</rfc>

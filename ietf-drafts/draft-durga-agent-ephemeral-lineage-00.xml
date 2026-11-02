@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="std"
+     docName="draft-durga-agent-ephemeral-lineage-00"
+     ipr="trust200902"
+     submissionType="IETF"
+     version="3"
+     xml:lang="en">
+  <front>
+    <title abbrev="Ephemeral Compaction &amp; Privacy Lineage">Cryptographic Context Compaction Receipts, Sensitivity Label Inheritance, and Verifiable Right-to-Be-Forgotten Lineage for Agent Memory</title>
+    <seriesInfo name="Internet-Draft" value="draft-durga-agent-ephemeral-lineage-00"/>
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+      </address>
+    </author>
+    <date year="2026" month="October" day="30"/>
+    <area>Security</area>
+    <workgroup>SCITT / PRIVACYPASS Working Group</workgroup>
+    <keyword>Agentic AI</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>JCS</keyword>
+    <keyword>Ed25519</keyword>
+    <keyword>Zero Trust</keyword>
+    <abstract>
+      <t>Long-running autonomous AI agents periodically summarize, compact, and distill episodic interaction logs into persistent vector or graph memory stores. Lossy context compaction erases the cryptographic provenance of which source documents contributed to a compacted memory state, stripping enterprise sensitivity labels (DLP classifications) and making regulatory data-erasure mandates (GDPR Article 17 Right to Erasure / CCPA purge) impossible to verify. This document specifies the Ephemeral Context Compaction Receipt (ECCR) protocol: a Merkle inclusion and label-ceiling receipt that preserves deterministic sensitivity inheritance and cryptographic purge verifiability across lossy memory compaction boundaries.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" numbered="true">
+      <name>Introduction and Problem Statement</name>
+      <t>When an agent summarizes 50 conversational turns and 12 retrieved enterprise files into a single compacted memory embedding or summary node, existing provenance formats (W3C PROV, SCITT) lose the cryptographic link between the pre-compaction source digests and the post-compaction memory artifact. Consequently, a HIGHLY_CONFIDENTIAL document can be silently laundered into an unlabeled memory summary, or survive a mandatory regulatory deletion tombstone.</t>
+      <t>This specification complements the foundational execution-trace verification architecture defined in <tt>draft-durga-agenttrust-trace-verification-00</tt> by introducing deterministic, fail-closed wire semantics specifically addressing Ephemeral Compaction &amp; Privacy Lineage.</t>
+    </section>
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Definitions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 (<xref target="RFC2119"/> <xref target="RFC8174"/>) when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="wire-format" numbered="true">
+      <name>Ephemeral Context Compaction Receipt (ECCR) Format</name>
+      <t>Whenever an agent memory subsystem performs lossy summarization, KV-cache eviction, or episodic memory compaction, it MUST emit a signed ECCR object before persisting the compacted artifact:</t>
+      <sourcecode type="json"><![CDATA[
+{
+  "eccr_version": "1.0",
+  "compaction_event_id": "urn:uuid:11a92c44-88b1-42c0-991a-77651234abcd",
+  "source_items_merkle_root": "sha256:1b4f0e9851971998e732078544c96b36c3d01cedf7caa332359d6f1d83567014",
+  "source_item_count": 62,
+  "compacted_output_hash": "sha256:7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730",
+  "inherited_sensitivity_ceiling": "CONFIDENTIAL_RESTRICTED",
+  "retention_purge_epoch": 1796083200,
+  "tombstone_bloom_filter_b64": "base64url(bloom_filter_bits)",
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "sig": "base64url(Ed25519(JCS(eccr)))"
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="verification-rules" numbered="true">
+      <name>Normative Fail-Closed Verification Rules</name>
+      <t>Conforming verifiers and relying-party gateways MUST enforce the following deterministic invariants before releasing any downstream side effect:</t>
+      <ol spacing="normal">
+        <li>LEAST_UPPER_BOUND_LABEL_INHERITANCE: The inherited_sensitivity_ceiling of a compacted memory artifact MUST equal the strict least-upper-bound (maximum sensitivity dominance level) of all pre-compaction source items included in source_items_merkle_root.</li>
+        <li>CRYPTOGRAPHIC_TOMBSTONE_PROPAGATION: If any source item included in source_items_merkle_root receives a regulatory purge tombstone, the memory store MUST invalidate compacted_output_hash and re-compact over the remaining non-tombstoned leaves, emitting a new superseding ECCR.</li>
+        <li>RETENTION_CEILING_BINDING: The retention_purge_epoch of the compacted artifact MUST NOT exceed the minimum expiration timestamp among all contributing source items.</li>
+      </ol>
+    </section>
+    <section anchor="security" numbered="true">
+      <name>Security Considerations</name>
+      <t>All pre-image objects MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to signature generation or verification under RFC 8032 Ed25519. Any clock skew exceeding 60 seconds, digest mismatch, or missing cryptographic binding MUST cause the verifier to fail closed and emit an auditable security rejection receipt.</t>
+    </section>
+    <section anchor="iana" numbered="true">
+      <name>IANA Considerations</name>
+      <t>This document requests IANA registration of the media type <tt>application/agent-lineage-eccr+json</tt> and the registry <tt>IETF Agent Memory Sensitivity Ceiling Profiles</tt>, alongside the following header fields:</t>
+      <ul spacing="normal">
+        <li>HTTP/MCP Header Field: <tt>Agent-Memory-Lineage-Receipt</tt></li>
+      </ul>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <name>Normative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+          <date month="March" year="1997"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="2119"/>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+          <date month="May" year="2017"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="8174"/>
+      </reference>
+      <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+        <front>
+          <title>JSON Canonicalization Scheme (JCS)</title>
+          <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+          <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+          <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+          <date month="June" year="2020"/>
+        </front>
+        <seriesInfo name="RFC" value="8785"/>
+      </reference>
+      <reference anchor="RFC8032" target="https://www.rfc-editor.org/info/rfc8032">
+        <front>
+          <title>Edwards-Curve Digital Signature Algorithm (EdDSA)</title>
+          <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+          <author fullname="I. Liusvaara" initials="I." surname="Liusvaara"/>
+          <date month="January" year="2017"/>
+        </front>
+        <seriesInfo name="RFC" value="8032"/>
+      </reference>
+    </references>
+  </back>
+</rfc>

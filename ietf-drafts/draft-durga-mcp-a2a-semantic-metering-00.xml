@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="std"
+     docName="draft-durga-mcp-a2a-semantic-metering-00"
+     ipr="trust200902"
+     submissionType="IETF"
+     version="3"
+     xml:lang="en">
+  <front>
+    <title abbrev="Cross-Protocol Semantic Equivalence &amp; Metering">Cross-Protocol Semantic Equivalence Proofs and Commit-Bound Metering Receipts for Multi-Vendor Agentic Exchanges</title>
+    <seriesInfo name="Internet-Draft" value="draft-durga-mcp-a2a-semantic-metering-00"/>
+    <author fullname="Raghuvar Karthik Durga" initials="R. K." surname="Durga">
+      <organization>Microsoft Corporation</organization>
+      <address>
+        <postal>
+          <country>US</country>
+        </postal>
+        <email>rdurga@microsoft.com</email>
+      </address>
+    </author>
+    <date year="2026" month="October" day="30"/>
+    <area>Security</area>
+    <workgroup>DISPATCH / HTTPAPI Working Group</workgroup>
+    <keyword>Agentic AI</keyword>
+    <keyword>MCP</keyword>
+    <keyword>A2A</keyword>
+    <keyword>JCS</keyword>
+    <keyword>Ed25519</keyword>
+    <keyword>Zero Trust</keyword>
+    <abstract>
+      <t>Enterprise agent ecosystems routinely bridge tool invocations and task delegations across heterogeneous protocols, including Model Context Protocol (MCP), Agent-to-Agent (A2A), and OpenAPI/REST. During protocol translation, safety invariants, schema constraints, and mutability flags are frequently stripped—enabling cross-protocol capability downgrade attacks—while commercial settlement gateways erroneously bill on HTTP 200 transport responses rather than verified state-commit durability. This document specifies a cryptographic Cross-Protocol Semantic Equivalence Proof (CPSEP) and an 8-state Commit-Bound Metering Receipt (CBMR) protocol.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" numbered="true">
+      <name>Introduction and Problem Statement</name>
+      <t>When an A2A task is translated by a proxy into an MCP tool call and subsequently into a REST request, no cryptographic proof exists that the translated request preserved the tighter permission bounds, rate limits, and JSON Schema invariants of the originating envelope. Furthermore, inter-organization agent exchanges lack a non-repudiable, commit-bound metering receipt tied to Write-Ahead Log (WAL) finality, leading to billing disputes on aborted or rolled-back agent invocations.</t>
+      <t>This specification complements the foundational execution-trace verification architecture defined in <tt>draft-durga-agenttrust-trace-verification-00</tt> by introducing deterministic, fail-closed wire semantics specifically addressing Cross-Protocol Semantic Equivalence &amp; Metering.</t>
+    </section>
+    <section anchor="conventions" numbered="true">
+      <name>Conventions and Definitions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 (<xref target="RFC2119"/> <xref target="RFC8174"/>) when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="wire-format" numbered="true">
+      <name>Semantic Equivalence Proof and Commit-Bound Metering Receipt Envelope</name>
+      <t>Protocol translation proxies and settlement gateways MUST emit and verify a JCS-canonicalized Semantic Metering Envelope carried in the Agent-Semantic-Metering HTTP header or JSON-RPC _meta block:</t>
+      <sourcecode type="json"><![CDATA[
+{
+  "cpsep_version": "1.0",
+  "exchange_tx_id": "urn:uuid:550e8400-e29b-41d4-a716-446655440000",
+  "protocol_bridge_path": ["A2A_1.0", "MCP_2025_11", "OPENAPI_3_1"],
+  "source_ast_merkle_root": "sha256:ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
+  "target_ast_merkle_root": "sha256:e7f6c011776e8db7cd330b54174fd76f7d0216b612387a5ffcfb81e6f0919683",
+  "downgrade_bitmask": 0,
+  "wal_commit_state": "COMMITTED_VERIFIED",
+  "prev_receipt_hash": "sha256:7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451",
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+    "sig": "base64url(Ed25519(JCS(receipt)))"
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="verification-rules" numbered="true">
+      <name>Normative Fail-Closed Verification Rules</name>
+      <t>Conforming verifiers and relying-party gateways MUST enforce the following deterministic invariants before releasing any downstream side effect:</t>
+      <ol spacing="normal">
+        <li>ZERO_DOWNGRADE_INVARIANT: Any translation across A2A, MCP, or REST that widens parameter bounds, drops a readOnly/idempotent constraint, or strips a required human-approval flag MUST set the corresponding bit in downgrade_bitmask, and the receiving endpoint MUST reject any envelope where downgrade_bitmask != 0.</li>
+        <li>COMMIT_BOUND_SETTLEMENT_FINALITY: A commercial metering gateway MUST NOT transition a billable agent transaction to SETTLED unless wal_commit_state equals COMMITTED_VERIFIED and is backed by a countersigned receipt from the target execution engine.</li>
+        <li>AUTOMATIC_COMPENSATION_ZERO_BILLING: Transactions terminating in ABORTED_PRE_COMMIT, TIMED_OUT, or COMPENSATED_ROLLED_BACK MUST settle to zero billable units.</li>
+      </ol>
+    </section>
+    <section anchor="security" numbered="true">
+      <name>Security Considerations</name>
+      <t>All pre-image objects MUST be canonicalized using RFC 8785 JSON Canonicalization Scheme (JCS) prior to signature generation or verification under RFC 8032 Ed25519. Any clock skew exceeding 60 seconds, digest mismatch, or missing cryptographic binding MUST cause the verifier to fail closed and emit an auditable security rejection receipt.</t>
+    </section>
+    <section anchor="iana" numbered="true">
+      <name>IANA Considerations</name>
+      <t>This document requests IANA registration of the media type <tt>application/agent-metering-receipt+json</tt> and the registry <tt>IETF Agent Metering Commit States (RESERVED, VALIDATED, EXECUTING, COMMITTED_VERIFIED, ABORTED_PRE_COMMIT, TIMED_OUT, COMPENSATED_ROLLED_BACK, SETTLED)</tt>, alongside the following header fields:</t>
+      <ul spacing="normal">
+        <li>HTTP/MCP Header Field: <tt>Agent-Semantic-Proof</tt></li>
+        <li>HTTP/MCP Header Field: <tt>Agent-Metering-Receipt</tt></li>
+      </ul>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <name>Normative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+          <date month="March" year="1997"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="2119"/>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+          <date month="May" year="2017"/>
+        </front>
+        <seriesInfo name="BCP" value="14"/>
+        <seriesInfo name="RFC" value="8174"/>
+      </reference>
+      <reference anchor="RFC8785" target="https://www.rfc-editor.org/info/rfc8785">
+        <front>
+          <title>JSON Canonicalization Scheme (JCS)</title>
+          <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
+          <author fullname="B. Jordan" initials="B." surname="Jordan"/>
+          <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
+          <date month="June" year="2020"/>
+        </front>
+        <seriesInfo name="RFC" value="8785"/>
+      </reference>
+      <reference anchor="RFC8032" target="https://www.rfc-editor.org/info/rfc8032">
+        <front>
+          <title>Edwards-Curve Digital Signature Algorithm (EdDSA)</title>
+          <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+          <author fullname="I. Liusvaara" initials="I." surname="Liusvaara"/>
+          <date month="January" year="2017"/>
+        </front>
+        <seriesInfo name="RFC" value="8032"/>
+      </reference>
+    </references>
+  </back>
+</rfc>

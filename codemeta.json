@@ -1,0 +1,44 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "Enterprise Agentic AI Governance, Zero-Trust Execution & Industrial Autonomy Reference Benchmarks",
+  "version": "1.1.0",
+  "license": "https://spdx.org/licenses/Apache-2.0",
+  "codeRepository": "https://github.com/drk-ram/enterprise-agentic-governance-benchmarks",
+  "identifier": "https://doi.org/10.5281/zenodo.23723284",
+  "datePublished": "2026-11-01",
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0009-0003-7014-355X",
+      "givenName": "Raghuvar Karthik",
+      "familyName": "Durga",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Microsoft Corporation"
+      }
+    }
+  ],
+  "citation": [
+    "https://datatracker.ietf.org/doc/draft-durga-agenttrust-trace-verification/",
+    "https://datatracker.ietf.org/doc/draft-durga-wimse-ctx-isolation/",
+    "https://datatracker.ietf.org/doc/draft-durga-pquip-pqc-agentic-delegation/",
+    "https://datatracker.ietf.org/doc/draft-durga-agent-tx-compensation-lease/",
+    "https://doi.org/10.57967/hf/11352",
+    "https://doi.org/10.5281/zenodo.23735274",
+    "https://doi.org/10.5281/zenodo.23735497",
+    "https://doi.org/10.5281/zenodo.23775009",
+    "https://doi.org/10.5281/zenodo.23775532",
+    "https://doi.org/10.5281/zenodo.23776217",
+    "https://doi.org/10.5281/zenodo.23776574",
+    "https://doi.org/10.5281/zenodo.23723284",
+    "https://doi.org/10.38124/ijsrmt.v4i12.1050",
+    "https://doi.org/10.38124/ijsrmt.v4i11.1049",
+    "https://doi.org/10.38124/ijsrmt.v4i10.1048",
+    "https://doi.org/10.38124/ijsrmt.v4i9.1047",
+    "https://doi.org/10.38124/ijsrmt.v4i8.1046",
+    "https://doi.org/10.38124/ijsrmt.v4i7.1045",
+    "https://doi.org/10.38124/ijsrmt.v4i6.1044",
+    "https://doi.org/10.38124/ijsrmt.v4i5.1043"
+  ]
+}
